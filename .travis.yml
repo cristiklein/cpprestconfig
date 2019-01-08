@@ -1,7 +1,7 @@
 language: cpp
 
 install:
-  - pip install -U cpplint
+  - sudo pip install cpplint
   - sudo apt-get install libboost-all-dev
 
 compiler:
