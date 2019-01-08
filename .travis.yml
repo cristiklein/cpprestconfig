@@ -11,6 +11,6 @@ compiler:
 before_script:
   - mkdir build
   - cd build
-  - cmake ..
+  - cmake -DTESTS=ON ..
 
 script: make && make test
