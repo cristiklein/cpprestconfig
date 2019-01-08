@@ -4,3 +4,6 @@
 [submodule "3rdparty/spdlog"]
 	path = 3rdparty/spdlog
 	url = https://github.com/gabime/spdlog.git
+[submodule "3rdparty/cpprestsdk"]
+	path = 3rdparty/cpprestsdk
+	url = https://github.com/Microsoft/cpprestsdk.git
