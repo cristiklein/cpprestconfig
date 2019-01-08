@@ -13,6 +13,9 @@ include(cpplint)
 cpplint_add_subdirectory(include)
 cpplint_add_subdirectory(src)
 
+set(BUILD_TESTS OFF CACHE BOOL "")
+add_subdirectory(3rdparty/cpprestsdk/Release EXCLUDE_FROM_ALL)
+
 # Core and main are split. This allows us to link core to main and tests.
 
 # Core library. *.cpp should be added here.
@@ -22,7 +25,9 @@ target_include_directories(cpprestconfig PUBLIC
   ./include)
 target_include_directories(cpprestconfig PRIVATE
   ./3rdparty/spdlog/include)
-target_link_libraries(cpprestconfig Boost::filesystem)
+target_link_libraries(cpprestconfig PRIVATE
+  Boost::filesystem
+  cpprest)
 
 # Add flags.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")

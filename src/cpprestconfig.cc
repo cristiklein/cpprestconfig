@@ -4,6 +4,8 @@
 #include <map>
 
 #include <boost/any.hpp>
+#include "cpprest/http_listener.h"
+#include "cpprest/json.h"
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
