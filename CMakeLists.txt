@@ -7,7 +7,7 @@ project(cpprestconfig CXX)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
-find_package(Boost 1.56 REQUIRED COMPONENTS filesystem)
+find_package(Boost 1.54 REQUIRED COMPONENTS filesystem)
 
 include(cpplint)
 cpplint_add_subdirectory(include)
