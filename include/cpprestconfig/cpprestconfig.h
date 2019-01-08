@@ -1,6 +1,6 @@
 // Copyright 2019 Cristian Klein
-#ifndef CPPRESTCONFIG_CPPRESTCONFIG_HH
-#define CPPRESTCONFIG_CPPRESTCONFIG_HH
+#ifndef INCLUDE_CPPRESTCONFIG_CPPRESTCONFIG_H_
+#define INCLUDE_CPPRESTCONFIG_CPPRESTCONFIG_H_
 
 namespace cpprestconfig {
 
@@ -15,6 +15,6 @@ void start_server(
     int port = 8080,
     const char *baseurl = "/api/config");
 
-} 
+}  // namespace cpprestconfig
 
-#endif  // CPPRESTCONFIG_CPPRESTCONFIG_HH
+#endif  // INCLUDE_CPPRESTCONFIG_CPPRESTCONFIG_H_

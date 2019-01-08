@@ -73,7 +73,8 @@ void start_server(
         logger()->info("{}={}", p.first, to_string(p.second.value));
     }
 
-    logger()->info("started, listening on 127.0.0.1:{}/{} (not yet implemented)",
+    logger()->info(
+        "started, listening on 127.0.0.1:{}/{} (not yet implemented)",
         port, baseurl);
 }
 

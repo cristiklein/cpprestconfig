@@ -1,3 +1,4 @@
+// Copyright 2019 Cristian Klein
 #include "cpprestconfig/cpprestconfig.h"
 
 #include <stdio.h>

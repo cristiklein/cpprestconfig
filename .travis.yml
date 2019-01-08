@@ -1,5 +1,8 @@
 language: cpp
 
+install:
+  - pip install -U cpplint
+
 compiler:
   - gcc
   - clang

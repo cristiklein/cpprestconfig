@@ -5,7 +5,13 @@ option(TESTS "build tests" OFF)
 
 project(cpprestconfig CXX)
 
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
+
 find_package(Boost 1.56 REQUIRED COMPONENTS filesystem)
+
+include(cpplint)
+cpplint_add_subdirectory(include)
+cpplint_add_subdirectory(src)
 
 # Core and main are split. This allows us to link core to main and tests.
 
