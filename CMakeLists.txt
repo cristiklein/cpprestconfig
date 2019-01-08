@@ -45,6 +45,7 @@ if(TESTS)
     ./src/cpprestconfig_test.cc)
 
   target_link_libraries(cpprestconfig_tests
+    cpprest
     gtest
     gtest_main
     cpprestconfig)

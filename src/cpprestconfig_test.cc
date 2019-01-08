@@ -4,6 +4,8 @@
 #include <stdio.h>
 
 #include "gtest/gtest.h"
+#include "cpprest/http_client.h"
+#include "cpprest/json.h"
 
 // cpprestconfig is specifically designed to allow usage in static
 // initilization context
@@ -36,6 +38,27 @@ TEST(CppRestConfigTest, NormalInitializationIsSetToDefault) {
     EXPECT_EQ(show_lorem, false);
 }
 
-TEST(CppRestConfigTest, StartServerDoesNotFail) {
-    cpprestconfig::start_server();
+TEST(CppRestConfigTest, ListAllConfigurationValues) {
+    using namespace web;  // NOLINT
+    using namespace web::http;  // NOLINT
+    using namespace web::http::client;  // NOLINT
+    using utility::conversions::to_string_t;
+
+    cpprestconfig::start_server(8088);
+
+    http_client client(U("http://localhost:8088/api/config"));
+    client.request(methods::GET, to_string_t(""))
+        .then([](http_response response) {
+            if (response.status_code() == status_codes::OK) {
+                return response.extract_json();
+            }
+            return pplx::task_from_result(json::value());
+        })
+        .then([](pplx::task<json::value> previousTask) {
+            const char *body = previousTask.get().serialize().c_str();
+            fprintf(stderr, "%s\n", body);
+        })
+        .wait();
+
+    EXPECT_EQ(true, false);
 }

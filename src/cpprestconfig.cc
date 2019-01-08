@@ -13,6 +13,10 @@ namespace cpprestconfig {
 
 using std::to_string;
 
+using namespace web;  // NOLINT
+using namespace web::http;  // NOLINT
+using namespace web::http::experimental::listener;  // NOLINT
+
 bool started = false;  // config(...) is mostly called in static initilization
                        // context, don't do anything funny
 
@@ -67,17 +71,41 @@ bool &config<bool>(
     return boost::any_cast<bool&>(cp.value);
 }
 
+void handle_get(http_request request) {
+    request.reply(status_codes::OK);
+}
+
 void start_server(
     int port,
-    const char *baseurl
+    const char *basepath
 ) {
     for (const auto &p : config_properties()) {
         logger()->info("{}={}", p.first, to_string(p.second.value));
     }
 
-    logger()->info(
-        "started, listening on 127.0.0.1:{}/{} (not yet implemented)",
-        port, baseurl);
+    auto uri = uri_builder()
+        .set_scheme("http")
+        .set_host("localhost")
+        .set_port(port)
+        .set_path(basepath)
+        .to_uri();
+    http_listener listener(uri);
+
+    logger()->info("blah");
+    listener.support(methods::GET, handle_get);
+    logger()->info("blah2");
+
+    try {
+        listener
+            .open()
+            .then([&listener]() {
+                logger()->info("blah3");
+                logger()->info("listening on {}", listener.uri().to_string());
+            })
+            .wait();
+    } catch (std::exception const &e) {
+        logger()->warn("Exception {}", e.what());
+    }
 }
 
 }  // namespace cpprestconfig
