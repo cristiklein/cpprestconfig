@@ -1,4 +1,4 @@
-#include "cpprestconfig/cpprestconfig.hh"
+#include "cpprestconfig/cpprestconfig.h"
 
 #include <stdio.h>
 
