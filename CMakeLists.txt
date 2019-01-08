@@ -5,6 +5,8 @@ option(TESTS "build tests" OFF)
 
 project(cpprestconfig CXX)
 
+find_package(Boost 1.56 REQUIRED COMPONENTS filesystem)
+
 # Core and main are split. This allows us to link core to main and tests.
 
 # Core library. *.cpp should be added here.
@@ -14,6 +16,7 @@ target_include_directories(cpprestconfig PUBLIC
   ./include)
 target_include_directories(cpprestconfig PRIVATE
   ./3rdparty/spdlog/include)
+target_link_libraries(cpprestconfig Boost::filesystem)
 
 # Add flags.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")
