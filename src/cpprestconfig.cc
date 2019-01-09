@@ -34,7 +34,7 @@ std::shared_ptr<spdlog::logger> logger() {
 }
 
 struct ConfigProperty {
-    std::string api_key, short_desc, long_desc;
+    std::string key, short_desc, long_desc;
     boost::any value, default_value;
 };
 typedef std::map<std::string, ConfigProperty> ConfigProperties;
@@ -91,14 +91,14 @@ json::value to_json_value(const std::type_info &type) {
 template<>
 bool &config<bool>(
     bool default_value,
-    const char *api_key,
+    const char *key,
     const char *short_desc,
     const char *long_desc
 ) {
-    logger()->info("{}={}", api_key, default_value);
+    logger()->info("{}={}", key, default_value);
 
-    ConfigProperty &cp = config_properties()[api_key];
-    cp.api_key = api_key;
+    ConfigProperty &cp = config_properties()[key];
+    cp.key = key;
     cp.short_desc = short_desc;
     cp.long_desc = long_desc;
     cp.value = default_value;

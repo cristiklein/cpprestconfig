@@ -7,7 +7,7 @@ namespace cpprestconfig {
 template<typename T>
 T &config(
     T default_value,
-    const char *api_key,
+    const char *key,
     const char *short_desc,
     const char *long_desc);
 
