@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 option(CPPRESTCONFIG_TESTS "Build tests" OFF)
+option(CPPRESTCONFIG_SAMPLES "Build samples" OFF)
 
 project(cpprestconfig CXX)
 
@@ -54,5 +55,16 @@ if(CPPRESTCONFIG_TESTS)
     NAME cpprestconfig_tests
     COMMAND $<TARGET_FILE:cpprestconfig_tests>
   )
+
+endif()
+
+if(CPPRESTCONFIG_SAMPLES)
+  message("Building samples")
+
+  add_executable(sample
+    ./samples/sample.cc)
+
+  target_link_libraries(sample
+    cpprestconfig)
 
 endif()
