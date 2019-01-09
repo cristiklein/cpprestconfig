@@ -35,7 +35,7 @@ std::shared_ptr<spdlog::logger> logger() {
 
 struct ConfigProperty {
     std::string api_key, short_desc, long_desc;
-    boost::any value;
+    boost::any value, default_value;
 };
 typedef std::map<std::string, ConfigProperty> ConfigProperties;
 
@@ -73,6 +73,7 @@ bool &config<bool>(
     cp.short_desc = short_desc;
     cp.long_desc = long_desc;
     cp.value = default_value;
+    cp.default_value = default_value;
 
     return boost::any_cast<bool&>(cp.value);
 }
