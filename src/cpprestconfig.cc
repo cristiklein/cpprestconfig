@@ -5,10 +5,23 @@
 #include <memory>
 
 #include <boost/any.hpp>
+#include <boost/lexical_cast.hpp>
 #include "cpprest/http_listener.h"
 #include "cpprest/json.h"
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
+
+namespace boost {
+    template<>
+    bool lexical_cast<bool, std::string>(const std::string& arg) {
+        fprintf(stderr, "%s\n", arg.c_str());
+        if (arg == "t" || arg == "1" || arg == "true")
+            return true;
+        if (arg == "f" || arg == "0" || arg == "false")
+            return false;
+        throw boost::bad_lexical_cast();
+    }
+}  // namespace boost
 
 namespace cpprestconfig {
 
