@@ -58,7 +58,42 @@ TEST(CppRestConfigTest, ListAllConfigurationValues) {
     cpprestconfig::stop_server();
 }
 
-TEST(CppRestConfigTest, ChangeConfigurationValue) {
+TEST(CppRestConfigTest, ChangeInt) {
+    using namespace web;  // NOLINT
+    using namespace web::http;  // NOLINT
+    using namespace web::http::client;  // NOLINT
+    using utility::conversions::to_string_t;
+
+    // of course, you can also use it in "normal" initialization context :)
+    const int &lorem_ipsum_verbosity = cpprestconfig::config(
+        0,
+        "main.lorem_ipsum_verbosity",
+        "How much lorem ipsum to show",
+        "This option is really useless, but you can enable it anyway for fun");
+
+    EXPECT_EQ(lorem_ipsum_verbosity, 0);
+
+    cpprestconfig::start_server(8088);
+
+    http_client client(U("http://127.0.0.1:8088/api/config"));
+    auto response = client.request(
+        methods::PUT,
+        "main.lorem_ipsum_verbosity",
+        "1").get();
+    EXPECT_EQ(lorem_ipsum_verbosity, 1);
+    EXPECT_EQ(response.status_code(), status_codes::OK);
+
+    response = client.request(
+        methods::PUT,
+        "main.lorem_ipsum_verbosity",
+        "-1").get();
+    EXPECT_EQ(lorem_ipsum_verbosity, -1);
+    EXPECT_EQ(response.status_code(), status_codes::OK);
+
+    cpprestconfig::stop_server();
+}
+
+TEST(CppRestConfigTest, ChangeBool) {
     using namespace web;  // NOLINT
     using namespace web::http;  // NOLINT
     using namespace web::http::client;  // NOLINT

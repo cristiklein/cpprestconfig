@@ -104,9 +104,9 @@ json::value to_json_value(const std::type_info &type) {
     return json::value::string(to_string(type));
 }
 
-template<>
-bool &config<bool>(
-    bool default_value,
+template<typename T>
+T& config(
+    T default_value,
     const char *key,
     const char *short_desc,
     const char *long_desc
@@ -120,8 +120,12 @@ bool &config<bool>(
     cp.value = default_value;
     cp.default_value = default_value;
 
-    return boost::any_cast<bool&>(cp.value);
+    return boost::any_cast<T&>(cp.value);
 }
+
+// explicit instantiation
+template bool& config(bool, const char *, const char *, const char *);
+template int& config(int, const char *, const char *, const char *);
 
 template<typename T>
 void _assign_from_string(boost::any *value, const std::string &s) {
