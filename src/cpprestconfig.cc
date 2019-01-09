@@ -226,8 +226,8 @@ void start_server(
 }
 
 void stop_server() {
-    (*g_listener).close();
-    g_listener.release();
+    logger()->info("stopped");
+    g_listener.reset();
 }
 
 }  // namespace cpprestconfig
