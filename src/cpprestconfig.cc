@@ -2,6 +2,7 @@
 #include "cpprestconfig/cpprestconfig.h"
 
 #include <map>
+#include <memory>
 
 #include <boost/any.hpp>
 #include "cpprest/http_listener.h"
@@ -19,6 +20,11 @@ using namespace web::http::experimental::listener;  // NOLINT
 
 bool started = false;  // config(...) is mostly called in static initilization
                        // context, don't do anything funny
+
+template<typename T, typename... Args>
+std::unique_ptr<T> make_unique(Args&&... args) {
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
 
 std::shared_ptr<spdlog::logger> logger() {
     static auto logger = std::make_shared<spdlog::logger>(
