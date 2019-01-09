@@ -87,18 +87,22 @@ json::value to_json_value(const boost::any &value) {
             value.type().name()));
 }
 
-json::value to_json_value(const std::type_info &type) {
+std::string to_string(const std::type_info &type) {
     if (type == typeid(void)) {
-        return json::value::string("null");
+        return "null";
     } else if (type == typeid(bool)) {
-        return json::value::string("boolean");
+        return "boolean";
     } else if (type == typeid(int)) {
-        return json::value::string("integer");
+        return "integer";
     } else if (type == typeid(std::string)) {
-        return json::value::string("string");
+        return "string";
     }
 
     throw std::runtime_error(fmt::format("Unknown type: {0}", type.name()));
+}
+
+json::value to_json_value(const std::type_info &type) {
+    return json::value::string(to_string(type));
 }
 
 template<>
