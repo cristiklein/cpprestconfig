@@ -23,8 +23,8 @@ const bool &show_cool_stuff = cpprestconfig::config(
     "Enable this option to display something cool in the video output");
 
 TEST(CppRestConfigTest, StaticInitializationIsSetToDefault) {
-    EXPECT_EQ(show_fps, false);
-    EXPECT_EQ(show_cool_stuff, true);
+    EXPECT_FALSE(show_fps);
+    EXPECT_FALSE(show_cool_stuff);
 }
 
 TEST(CppRestConfigTest, NormalInitializationIsSetToDefault) {
@@ -35,7 +35,7 @@ TEST(CppRestConfigTest, NormalInitializationIsSetToDefault) {
         "Show a lorem ipsum message",
         "This option is really useless, but you can enable it anyway for fun");
 
-    EXPECT_EQ(show_lorem, false);
+    EXPECT_FALSE(show_lorem);
 }
 
 TEST(CppRestConfigTest, ListAllConfigurationValues) {
