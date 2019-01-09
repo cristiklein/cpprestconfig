@@ -59,6 +59,35 @@ std::string to_string(const boost::any &value) {
             value.type().name()));
 }
 
+json::value to_json_value(const boost::any &value) {
+    if (value.type() == typeid(void)) {
+        return json::value::null();
+    } else if (value.type() == typeid(bool)) {
+        return json::value::boolean(boost::any_cast<bool>(value));
+    } else if (value.type() == typeid(int)) {
+        return json::value::number(boost::any_cast<int>(value));
+    } else if (value.type() == typeid(std::string)) {
+        return json::value::string(boost::any_cast<std::string>(value));
+    }
+
+    throw std::runtime_error(fmt::format("Unknown boost::any type: {0}",
+            value.type().name()));
+}
+
+json::value to_json_value(const std::type_info &type) {
+    if (type == typeid(void)) {
+        return json::value::string("null");
+    } else if (type == typeid(bool)) {
+        return json::value::string("boolean");
+    } else if (type == typeid(int)) {
+        return json::value::string("integer");
+    } else if (type == typeid(std::string)) {
+        return json::value::string("string");
+    }
+
+    throw std::runtime_error(fmt::format("Unknown type: {0}", type.name()));
+}
+
 template<>
 bool &config<bool>(
     bool default_value,
@@ -79,8 +108,23 @@ bool &config<bool>(
 }
 
 void handle_get(http_request request) {
-    request.reply(status_codes::OK);
+    auto body = json::value::object();
+
+    for (auto const & p : config_properties()) {
+        auto o = json::value::object();
+        o["short_desc"] = json::value::string(p.second.short_desc);
+        o["long_desc"] = json::value::string(p.second.long_desc);
+        o["default_value"] = to_json_value(p.second.default_value);
+        o["value"] = to_json_value(p.second.value);
+        o["type"] = to_json_value(p.second.value.type());
+
+        body[p.first] = o;
+    }
+
+    request.reply(status_codes::OK, body);
 }
+
+std::unique_ptr<http_listener> g_listener;
 
 void start_server(
     int port,
@@ -96,23 +140,21 @@ void start_server(
         .set_port(port)
         .set_path(basepath)
         .to_uri();
-    http_listener listener(uri);
 
-    logger()->info("blah");
-    listener.support(methods::GET, handle_get);
-    logger()->info("blah2");
+    // should close previous listener
+    g_listener = make_unique<http_listener>(uri);
+    g_listener->support(methods::GET, handle_get);
 
     try {
-        listener
-            .open()
-            .then([&listener]() {
-                logger()->info("blah3");
-                logger()->info("listening on {}", listener.uri().to_string());
-            })
-            .wait();
+        (*g_listener).open().wait();
+        logger()->info("listening on {}", g_listener->uri().to_string());
     } catch (std::exception const &e) {
         logger()->warn("Exception {}", e.what());
     }
+}
+
+void stop_server() {
+    g_listener.release();
 }
 
 }  // namespace cpprestconfig

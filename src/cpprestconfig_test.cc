@@ -46,8 +46,8 @@ TEST(CppRestConfigTest, ListAllConfigurationValues) {
 
     cpprestconfig::start_server(8088);
 
-    http_client client(U("http://localhost:8088/api/config"));
-    client.request(methods::GET, to_string_t(""))
+    http_client client(U("http://127.0.0.1:8088/api/config"));
+    client.request(methods::GET, U("/"))
         .then([](http_response response) {
             if (response.status_code() == status_codes::OK) {
                 return response.extract_json();
@@ -60,5 +60,5 @@ TEST(CppRestConfigTest, ListAllConfigurationValues) {
         })
         .wait();
 
-    EXPECT_EQ(true, false);
+    cpprestconfig::stop_server();
 }

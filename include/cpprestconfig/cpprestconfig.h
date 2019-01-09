@@ -15,6 +15,8 @@ void start_server(
     int port = 8080,
     const char *baseurl = "/api/config");
 
+void stop_server();
+
 }  // namespace cpprestconfig
 
 #endif  // INCLUDE_CPPRESTCONFIG_CPPRESTCONFIG_H_
