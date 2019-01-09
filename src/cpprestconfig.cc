@@ -154,6 +154,7 @@ void start_server(
 }
 
 void stop_server() {
+    (*g_listener).close();
     g_listener.release();
 }
 
