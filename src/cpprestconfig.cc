@@ -42,7 +42,7 @@ std::string to_string(const boost::any &value) {
     if (value.type() == typeid(void)) {
         return "void";
     } else if (value.type() == typeid(bool)) {
-        return std::to_string(boost::any_cast<bool>(value));
+        return boost::any_cast<bool>(value) ? "true" : "false";
     } else if (value.type() == typeid(int)) {
         return std::to_string(boost::any_cast<int>(value));
     } else if (value.type() == typeid(std::string)) {
