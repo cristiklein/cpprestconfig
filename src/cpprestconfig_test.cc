@@ -90,6 +90,13 @@ TEST(CppRestConfigTest, ChangeConfigurationValue) {
     EXPECT_FALSE(show_lorem_ipsum);
     EXPECT_EQ(response.status_code(), status_codes::OK);
 
+    response = client.request(
+        methods::PUT,
+        "main.show_lorem_ipsum",
+        "true").get();
+    EXPECT_TRUE(show_lorem_ipsum);
+    EXPECT_EQ(response.status_code(), status_codes::OK);
+
     cpprestconfig::stop_server();
 }
 
@@ -107,6 +114,8 @@ TEST(CppRestConfigTest, InvalidKey) {
         "key_does_not_exist",
         "true").get();
     EXPECT_EQ(response.status_code(), status_codes::NotFound);
+
+    cpprestconfig::stop_server();
 }
 
 TEST(CppRestConfigTest, InvalidValue) {
@@ -123,4 +132,6 @@ TEST(CppRestConfigTest, InvalidValue) {
         "main.show_fps",
         "weird_value").get();
     EXPECT_EQ(response.status_code(), status_codes::BadRequest);
+
+    cpprestconfig::stop_server();
 }
