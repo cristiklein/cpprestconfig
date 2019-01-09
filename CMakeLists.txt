@@ -14,6 +14,7 @@ cpplint_add_subdirectory(include)
 cpplint_add_subdirectory(src)
 
 set(BUILD_TESTS OFF CACHE BOOL "")
+set(CPPREST_EXCLUDE_WEBSOCKETS ON CACHE BOOL "")
 add_subdirectory(3rdparty/cpprestsdk/Release EXCLUDE_FROM_ALL)
 
 # Core and main are split. This allows us to link core to main and tests.
