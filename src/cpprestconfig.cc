@@ -14,7 +14,6 @@
 namespace boost {
     template<>
     bool lexical_cast<bool, std::string>(const std::string& arg) {
-        fprintf(stderr, "%s\n", arg.c_str());
         if (arg == "t" || arg == "1" || arg == "true")
             return true;
         if (arg == "f" || arg == "0" || arg == "false")
