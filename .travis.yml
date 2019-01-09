@@ -10,6 +10,6 @@ compiler:
 before_script:
   - mkdir build
   - cd build
-  - cmake -DCPPRESTCONFIG_TESTS=ON ..
+  - cmake -DCPPRESTCONFIG_TESTS=ON -DCPPRESTCONFIG_SAMPLES=ON -DCMAKE_BUILD_TYPE=ReleaseWithDebInfo ..
 
 script: make && make test
