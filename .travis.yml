@@ -10,6 +10,6 @@ compiler:
 before_script:
   - mkdir build
   - cd build
-  - cmake -DTESTS=ON ..
+  - cmake -DCPPRESTCONFIG_TESTS=ON ..
 
 script: make && make test
