@@ -24,7 +24,7 @@ const bool &show_cool_stuff = cpprestconfig::config(
 
 TEST(CppRestConfigTest, StaticInitializationIsSetToDefault) {
     EXPECT_FALSE(show_fps);
-    EXPECT_FALSE(show_cool_stuff);
+    EXPECT_TRUE(show_cool_stuff);
 }
 
 TEST(CppRestConfigTest, NormalInitializationIsSetToDefault) {
