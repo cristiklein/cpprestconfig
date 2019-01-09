@@ -57,3 +57,70 @@ TEST(CppRestConfigTest, ListAllConfigurationValues) {
 
     cpprestconfig::stop_server();
 }
+
+TEST(CppRestConfigTest, ChangeConfigurationValue) {
+    using namespace web;  // NOLINT
+    using namespace web::http;  // NOLINT
+    using namespace web::http::client;  // NOLINT
+    using utility::conversions::to_string_t;
+
+    // of course, you can also use it in "normal" initialization context :)
+    const bool &show_lorem_ipsum = cpprestconfig::config(
+        false,
+        "main.show_lorem_ipsum",
+        "Show a lorem ipsum message",
+        "This option is really useless, but you can enable it anyway for fun");
+
+    EXPECT_FALSE(show_lorem_ipsum);
+
+    cpprestconfig::start_server(8088);
+
+    http_client client(U("http://127.0.0.1:8088/api/config"));
+    auto response = client.request(
+        methods::PUT,
+        "main.show_lorem_ipsum",
+        "true").get();
+    EXPECT_TRUE(show_lorem_ipsum);
+    EXPECT_EQ(response.status_code(), status_codes::OK);
+
+    response = client.request(
+        methods::PUT,
+        "main.show_lorem_ipsum",
+        "false").get();
+    EXPECT_FALSE(show_lorem_ipsum);
+    EXPECT_EQ(response.status_code(), status_codes::OK);
+
+    cpprestconfig::stop_server();
+}
+
+TEST(CppRestConfigTest, InvalidKey) {
+    using namespace web;  // NOLINT
+    using namespace web::http;  // NOLINT
+    using namespace web::http::client;  // NOLINT
+    using utility::conversions::to_string_t;
+
+    cpprestconfig::start_server(8088);
+
+    http_client client(U("http://127.0.0.1:8088/api/config"));
+    auto response = client.request(
+        methods::PUT,
+        "key_does_not_exist",
+        "true").get();
+    EXPECT_EQ(response.status_code(), status_codes::NotFound);
+}
+
+TEST(CppRestConfigTest, InvalidValue) {
+    using namespace web;  // NOLINT
+    using namespace web::http;  // NOLINT
+    using namespace web::http::client;  // NOLINT
+    using utility::conversions::to_string_t;
+
+    cpprestconfig::start_server(8088);
+
+    http_client client(U("http://127.0.0.1:8088/api/config"));
+    auto response = client.request(
+        methods::PUT,
+        "main.show_fps",
+        "weird_value").get();
+    EXPECT_EQ(response.status_code(), status_codes::BadRequest);
+}

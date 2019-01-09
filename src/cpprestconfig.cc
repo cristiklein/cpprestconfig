@@ -141,6 +141,58 @@ void handle_get(http_request request) {
     request.reply(status_codes::OK, body);
 }
 
+void handle_put(http_request request) {
+    auto const &path = uri::split_path(request.request_uri().path());
+
+    if (path.empty()) {
+        request.reply(
+            status_codes::BadRequest,
+            fmt::format("Got empty path in request"));
+        return;
+    }
+
+    const std::string &key = path.back();
+    const std::string new_value = request.extract_string().get();
+    ConfigProperty *cp = NULL;
+
+    try {
+        cp = &config_properties().at(key);
+
+        auto const &type = cp->value.type();
+        auto &value = cp->value;
+
+        if (type == typeid(void)) {
+            request.reply(
+                status_codes::BadRequest,
+                fmt::format("key {} is of type void", key));
+        } else if (type == typeid(bool)) {
+            value = boost::lexical_cast<bool>(new_value);
+            request.reply(status_codes::OK);
+        } else if (type == typeid(int)) {
+            value = boost::lexical_cast<int>(new_value);
+            request.reply(status_codes::OK);
+        } else if (type == typeid(std::string)) {
+            value = new_value;
+            request.reply(status_codes::OK);
+        } else {
+            throw std::runtime_error(fmt::format("Unknown boost::any type: {0}",
+                type.name()));
+        }
+
+        logger()->info("{}={}", key, to_string(value));
+    } catch (const std::out_of_range &ex) {
+        request.reply(status_codes::NotFound,
+            fmt::format("Key {} not found", key));
+    } catch (const boost::bad_lexical_cast &ex) {
+        request.reply(status_codes::BadRequest,
+            fmt::format("Cannot convert '{}' to {}",
+                new_value,
+                cp ? to_string(cp->value.type()) : "unknown"));
+    } catch (const std::exception &ex) {
+        request.reply(status_codes::InternalError, ex.what());
+    }
+}
+
 std::unique_ptr<http_listener> g_listener;
 
 void start_server(
@@ -161,6 +213,7 @@ void start_server(
     // should close previous listener
     g_listener = make_unique<http_listener>(uri);
     g_listener->support(methods::GET, handle_get);
+    g_listener->support(methods::PUT, handle_put);
 
     try {
         (*g_listener).open().wait();
