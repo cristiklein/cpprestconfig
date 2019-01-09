@@ -47,18 +47,13 @@ TEST(CppRestConfigTest, ListAllConfigurationValues) {
     cpprestconfig::start_server(8088);
 
     http_client client(U("http://127.0.0.1:8088/api/config"));
-    client.request(methods::GET, U("/"))
-        .then([](http_response response) {
-            if (response.status_code() == status_codes::OK) {
-                return response.extract_json();
-            }
-            return pplx::task_from_result(json::value());
-        })
-        .then([](pplx::task<json::value> previousTask) {
-            const char *body = previousTask.get().serialize().c_str();
-            fprintf(stderr, "%s\n", body);
-        })
-        .wait();
+    auto response = client.request(methods::GET).get();
+    EXPECT_EQ(response.status_code(), status_codes::OK);
+
+    auto body = response.extract_json().get();
+
+    EXPECT_EQ(body["main.show_lorem"]["type"].as_string(), "boolean");
+    EXPECT_EQ(body["main.show_lorem"]["default_value"].as_bool(), false);
 
     cpprestconfig::stop_server();
 }
