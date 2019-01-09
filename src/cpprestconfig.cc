@@ -123,6 +123,27 @@ bool &config<bool>(
     return boost::any_cast<bool&>(cp.value);
 }
 
+template<typename T>
+void _assign_from_string(boost::any *value, const std::string &s) {
+    boost::any_cast<T&>(*value) = boost::lexical_cast<T>(s);
+}
+
+/** Assign a value to any *without* changing its type or
+ * triggering a reallocation. */
+void assign_from_string(boost::any *value, const std::string &s) {
+    auto const &type = value->type();
+    if (type == typeid(bool)) {
+        _assign_from_string<bool>(value, s);
+    } else if (type == typeid(int)) {
+        _assign_from_string<int>(value, s);
+    } else if (type == typeid(std::string)) {
+        _assign_from_string<std::string>(value, s);
+    } else {
+        throw std::runtime_error(fmt::format("Unknown boost::any type: {0}",
+            type.name()));
+    }
+}
+
 void handle_get(http_request request) {
     auto body = json::value::object();
 
@@ -157,28 +178,10 @@ void handle_put(http_request request) {
     try {
         cp = &config_properties().at(key);
 
-        auto const &type = cp->value.type();
-        auto &value = cp->value;
+        assign_from_string(&cp->value, new_value);
+        logger()->info("{}={}", key, to_string(cp->value));
 
-        if (type == typeid(void)) {
-            request.reply(
-                status_codes::BadRequest,
-                fmt::format("key {} is of type void", key));
-        } else if (type == typeid(bool)) {
-            value = boost::lexical_cast<bool>(new_value);
-            request.reply(status_codes::OK);
-        } else if (type == typeid(int)) {
-            value = boost::lexical_cast<int>(new_value);
-            request.reply(status_codes::OK);
-        } else if (type == typeid(std::string)) {
-            value = new_value;
-            request.reply(status_codes::OK);
-        } else {
-            throw std::runtime_error(fmt::format("Unknown boost::any type: {0}",
-                type.name()));
-        }
-
-        logger()->info("{}={}", key, to_string(value));
+        request.reply(status_codes::OK);
     } catch (const std::out_of_range &ex) {
         request.reply(status_codes::NotFound,
             fmt::format("Key {} not found", key));
