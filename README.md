@@ -84,3 +84,7 @@ add_subdirectory(3rdparty/cpprestconfig EXCLUDE_FROM_ALL)
 target_link_libraries(my_executable
     cpprestconfig)
 ```
+
+Security
+--------
+This library makes no provision for authentication and authorization, however, it listens only on `localhost`. This means that any process and user running on the same machine (or in the same container, depending on your isolation), can change configuration variables. An application server is supposed to sit in from of the REST endpoint for authentication and authorization.
