@@ -93,6 +93,59 @@ TEST(CppRestConfigTest, ChangeInt) {
     cpprestconfig::stop_server();
 }
 
+TEST(CppRestConfigTest, ChangeBoolWithCallback) {
+    using namespace web;  // NOLINT
+    using namespace web::http;  // NOLINT
+    using namespace web::http::client;  // NOLINT
+    using utility::conversions::to_string_t;
+
+    const char *key = "main.show_with_callback";
+
+    bool callback_called = false;
+    bool value_during_callback;
+
+    // of course, you can also use it in "normal" initialization context :)
+    const bool &value = cpprestconfig::config<bool>(
+        false,
+        key,
+        "Show a lorem ipsum message",
+        "This option is really useless, but you can enable it anyway for fun",
+        [&callback_called, &value_during_callback]
+        (const char *key, bool value) {
+            callback_called = true;
+            value_during_callback = value;
+        });
+
+    EXPECT_FALSE(value);
+    EXPECT_FALSE(callback_called);
+
+    cpprestconfig::start_server(8088);
+
+    http_client client(U("http://127.0.0.1:8088/api/config"));
+
+    callback_called = false;
+    auto response = client.request(
+        methods::PUT,
+        key,
+        "true").get();
+    EXPECT_TRUE(value);
+    EXPECT_TRUE(callback_called);
+    EXPECT_EQ(value, value_during_callback);
+    EXPECT_EQ(response.status_code(), status_codes::OK);
+
+    callback_called = false;
+    response = client.request(
+        methods::PUT,
+        key,
+        "false").get();
+    EXPECT_FALSE(value);
+    EXPECT_TRUE(callback_called);
+    EXPECT_EQ(value, value_during_callback);
+    EXPECT_EQ(response.status_code(), status_codes::OK);
+
+    cpprestconfig::stop_server();
+}
+
 TEST(CppRestConfigTest, ChangeBool) {
     using namespace web;  // NOLINT
     using namespace web::http;  // NOLINT
@@ -130,6 +183,50 @@ TEST(CppRestConfigTest, ChangeBool) {
         "main.show_lorem_ipsum",
         "true").get();
     EXPECT_TRUE(show_lorem_ipsum);
+    EXPECT_EQ(response.status_code(), status_codes::OK);
+
+    cpprestconfig::stop_server();
+}
+
+TEST(CppRestConfigTest, ChangeIntWithRange) {
+    using namespace web;  // NOLINT
+    using namespace web::http;  // NOLINT
+    using namespace web::http::client;  // NOLINT
+    using utility::conversions::to_string_t;
+
+    // of course, you can also use it in "normal" initialization context :)
+    const int &exposure = cpprestconfig::config(
+        1570,
+        "main.exposure",
+        "Set exposure",
+        "This option is really useless, but you can enable it anyway for fun",
+        {},  // no callback
+        { 100, 2810, 10 });
+
+    EXPECT_EQ(exposure, 1570);
+
+    cpprestconfig::start_server(8088);
+
+    http_client client(U("http://127.0.0.1:8088/api/config"));
+    auto response = client.request(
+        methods::PUT,
+        "main.exposure",
+        "-15").get();
+    EXPECT_EQ(exposure, 100);
+    EXPECT_EQ(response.status_code(), status_codes::OK);
+
+    response = client.request(
+        methods::PUT,
+        "main.exposure",
+        "3000").get();
+    EXPECT_EQ(exposure, 2810);
+    EXPECT_EQ(response.status_code(), status_codes::OK);
+
+    response = client.request(
+        methods::PUT,
+        "main.exposure",
+        "1555").get();
+    EXPECT_EQ(exposure, 1550);
     EXPECT_EQ(response.status_code(), status_codes::OK);
 
     cpprestconfig::stop_server();

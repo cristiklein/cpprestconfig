@@ -4,7 +4,6 @@
 #include <map>
 #include <memory>
 
-#include <boost/any.hpp>
 #include <boost/lexical_cast.hpp>
 #include "cpprest/http_listener.h"
 #include "cpprest/json.h"
@@ -45,10 +44,134 @@ std::shared_ptr<spdlog::logger> logger() {
     return logger;
 }
 
+template<typename T>
+struct ConfigTypeProperty {
+    T value, default_value;
+    callback<T> _callback;
+    struct limits<T> _limits;
+};
+
+std::string to_string(bool b) {
+    return b ? "true" : "false";
+}
+
+template<typename T>
+std::string to_string(const ConfigTypeProperty<T> &cpt) {
+    return to_string(cpt.value);
+}
+
+template<typename T>
+json::value to_json_value(const ConfigTypeProperty<T> &cpt) {
+    return json::value(cpt.value);
+}
+
+template<typename T>
+json::value to_json_value_from_default(const ConfigTypeProperty<T> &cpt) {
+    return json::value(cpt.default_value);
+}
+
+bool apply_limits(bool value, const struct limits<bool> &l) {
+    return value;  // i.e., nothing
+}
+
+int apply_limits(int value, const struct limits<int> &l) {
+    if (l.step == 0)  // i.e., no constraints
+        return value;
+    if (value < l.min)
+        return l.min;
+    if (value > l.max)
+        return l.max;
+    if (l.step != 1)
+        value = (value - l.min) / l.step * l.step + l.min;
+    return value;
+}
+
+template<typename T>
+void assign_from_string(
+    ConfigTypeProperty<T> *cpt,
+    const std::string &key,
+    const std::string &s
+) {
+    cpt->value = apply_limits(boost::lexical_cast<T>(s), cpt->_limits);
+    if (cpt->_callback) {
+        cpt->_callback(key.c_str(), cpt->value);
+    }
+}
+
+enum ConfigType {
+    BOOL,
+    INT
+};
+
+std::string to_string(ConfigType c) {
+    switch (c) {
+        case BOOL:
+            return "boolean";
+        case INT:
+            return "integer";
+        default:
+            throw std::runtime_error("Unknown config type");
+    }
+}
+
 struct ConfigProperty {
     std::string key, short_desc, long_desc;
-    boost::any value, default_value;
+    ConfigType type;
+    ConfigTypeProperty<bool> bool_property;
+    ConfigTypeProperty<int> int_property;
 };
+
+std::string to_string(const ConfigProperty &cp) {
+    switch (cp.type) {
+        case BOOL:
+            return to_string(cp.bool_property);
+        case INT:
+            return to_string(cp.int_property);
+        default:
+            throw std::runtime_error("Unknown config type");
+    }
+}
+
+json::value to_json_value(const ConfigProperty &cp) {
+    switch (cp.type) {
+        case BOOL:
+            return to_json_value(cp.bool_property);
+        case INT:
+            return to_json_value(cp.int_property);
+        default:
+            throw std::runtime_error("Unknown config type");
+    }
+}
+
+json::value to_json_value_from_default(const ConfigProperty &cp) {
+    switch (cp.type) {
+        case BOOL:
+            return to_json_value_from_default(cp.bool_property);
+        case INT:
+            return to_json_value_from_default(cp.int_property);
+        default:
+            throw std::runtime_error("Unknown config type");
+    }
+}
+
+void assign_from_string(
+    ConfigProperty *cp,
+    const std::string &key,
+    const std::string &s
+) {
+    switch (cp->type) {
+        case BOOL:
+            assign_from_string(&cp->bool_property, key, s);
+            break;
+        case INT:
+            assign_from_string(&cp->int_property, key, s);
+            break;
+        default:
+            throw std::runtime_error("Unknown config type");
+    }
+}
+
+
 typedef std::map<std::string, ConfigProperty> ConfigProperties;
 
 static ConfigProperties& config_properties() {
@@ -56,60 +179,14 @@ static ConfigProperties& config_properties() {
     return cp;
 }
 
-std::string to_string(const boost::any &value) {
-    if (value.type() == typeid(void)) {
-        return "void";
-    } else if (value.type() == typeid(bool)) {
-        return boost::any_cast<bool>(value) ? "true" : "false";
-    } else if (value.type() == typeid(int)) {
-        return std::to_string(boost::any_cast<int>(value));
-    } else if (value.type() == typeid(std::string)) {
-        return boost::any_cast<std::string>(value);
-    }
-
-    throw std::runtime_error(fmt::format("Unknown boost::any type: {0}",
-            value.type().name()));
-}
-
-json::value to_json_value(const boost::any &value) {
-    if (value.type() == typeid(void)) {
-        return json::value::null();
-    } else if (value.type() == typeid(bool)) {
-        return json::value::boolean(boost::any_cast<bool>(value));
-    } else if (value.type() == typeid(int)) {
-        return json::value::number(boost::any_cast<int>(value));
-    } else if (value.type() == typeid(std::string)) {
-        return json::value::string(boost::any_cast<std::string>(value));
-    }
-
-    throw std::runtime_error(fmt::format("Unknown boost::any type: {0}",
-            value.type().name()));
-}
-
-std::string to_string(const std::type_info &type) {
-    if (type == typeid(void)) {
-        return "null";
-    } else if (type == typeid(bool)) {
-        return "boolean";
-    } else if (type == typeid(int)) {
-        return "integer";
-    } else if (type == typeid(std::string)) {
-        return "string";
-    }
-
-    throw std::runtime_error(fmt::format("Unknown type: {0}", type.name()));
-}
-
-json::value to_json_value(const std::type_info &type) {
-    return json::value::string(to_string(type));
-}
-
-template<typename T>
-T& config(
-    T default_value,
+template<>
+bool& config(
+    bool default_value,
     const char *key,
     const char *short_desc,
-    const char *long_desc
+    const char *long_desc,
+    callback<bool> _callback,
+    limits<bool> _limits
 ) {
     logger()->info("{}={}", key, default_value);
 
@@ -117,35 +194,39 @@ T& config(
     cp.key = key;
     cp.short_desc = short_desc;
     cp.long_desc = long_desc;
-    cp.value = default_value;
-    cp.default_value = default_value;
 
-    return boost::any_cast<T&>(cp.value);
+    cp.type = BOOL;
+    cp.bool_property.value = default_value;
+    cp.bool_property.default_value = default_value;
+    cp.bool_property._callback = _callback;
+    cp.bool_property._limits = _limits;
+
+    return cp.bool_property.value;
 }
 
-// explicit instantiation
-template bool& config(bool, const char *, const char *, const char *);
-template int& config(int, const char *, const char *, const char *);
+template<>
+int& config<int>(
+    int default_value,
+    const char *key,
+    const char *short_desc,
+    const char *long_desc,
+    callback<int> _callback,
+    limits<int> _limits
+) {
+    logger()->info("{}={}", key, default_value);
 
-template<typename T>
-void _assign_from_string(boost::any *value, const std::string &s) {
-    boost::any_cast<T&>(*value) = boost::lexical_cast<T>(s);
-}
+    ConfigProperty &cp = config_properties()[key];
+    cp.key = key;
+    cp.short_desc = short_desc;
+    cp.long_desc = long_desc;
 
-/** Assign a value to any *without* changing its type or
- * triggering a reallocation. */
-void assign_from_string(boost::any *value, const std::string &s) {
-    auto const &type = value->type();
-    if (type == typeid(bool)) {
-        _assign_from_string<bool>(value, s);
-    } else if (type == typeid(int)) {
-        _assign_from_string<int>(value, s);
-    } else if (type == typeid(std::string)) {
-        _assign_from_string<std::string>(value, s);
-    } else {
-        throw std::runtime_error(fmt::format("Unknown boost::any type: {0}",
-            type.name()));
-    }
+    cp.type = INT;
+    cp.int_property.value = default_value;
+    cp.int_property.default_value = default_value;
+    cp.int_property._callback = _callback;
+    cp.int_property._limits = _limits;
+
+    return cp.int_property.value;
 }
 
 void handle_get(http_request request) {
@@ -153,11 +234,12 @@ void handle_get(http_request request) {
 
     for (auto const & p : config_properties()) {
         auto o = json::value::object();
-        o["short_desc"] = json::value::string(p.second.short_desc);
-        o["long_desc"] = json::value::string(p.second.long_desc);
-        o["default_value"] = to_json_value(p.second.default_value);
-        o["value"] = to_json_value(p.second.value);
-        o["type"] = to_json_value(p.second.value.type());
+        auto &cp = p.second;
+        o["short_desc"] = json::value::string(cp.short_desc);
+        o["long_desc"] = json::value::string(cp.long_desc);
+        o["default_value"] = to_json_value_from_default(cp);
+        o["value"] = to_json_value(cp);
+        o["type"] = json::value::string(to_string(cp.type));
 
         body[p.first] = o;
     }
@@ -181,9 +263,9 @@ void handle_put(http_request request) {
 
     try {
         cp = &config_properties().at(key);
+        assign_from_string(cp, key, new_value);
 
-        assign_from_string(&cp->value, new_value);
-        logger()->info("{}={}", key, to_string(cp->value));
+        logger()->info("{}={}", key, to_string(*cp));
 
         request.reply(status_codes::OK);
     } catch (const std::out_of_range &ex) {
@@ -193,7 +275,7 @@ void handle_put(http_request request) {
         request.reply(status_codes::BadRequest,
             fmt::format("Cannot convert '{}' to {}",
                 new_value,
-                cp ? to_string(cp->value.type()) : "unknown"));
+                to_string(cp->type)));
     } catch (const std::exception &ex) {
         request.reply(status_codes::InternalError, ex.what());
     }
@@ -206,7 +288,7 @@ void start_server(
     const char *basepath
 ) {
     for (const auto &p : config_properties()) {
-        logger()->info("{}={}", p.first, to_string(p.second.value));
+        logger()->info("{}={}", p.first, to_string(p.second));
     }
 
     auto uri = uri_builder()
