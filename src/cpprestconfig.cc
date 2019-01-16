@@ -70,6 +70,18 @@ json::value to_json_value_from_default(const ConfigTypeProperty<T> &cpt) {
     return json::value(cpt.default_value);
 }
 
+json::value to_json_limits(const struct limits<bool> &l) {
+    return json::value();  // null JSON, bool has no limits
+}
+
+json::value to_json_limits(const struct limits<int> &l) {
+    auto o = json::value::object();
+    o["min"] = json::value(l.min);
+    o["max"] = json::value(l.max);
+    o["step"] = json::value(l.step);
+    return o;
+}
+
 bool apply_limits(bool value, const struct limits<bool> &l) {
     return value;  // i.e., nothing
 }
@@ -127,6 +139,17 @@ std::string to_string(const ConfigProperty &cp) {
             return to_string(cp.bool_property);
         case INT:
             return to_string(cp.int_property);
+        default:
+            throw std::runtime_error("Unknown config type");
+    }
+}
+
+json::value to_json_limits(const ConfigProperty &cp) {
+    switch (cp.type) {
+        case BOOL:
+            return to_json_limits(cp.bool_property._limits);
+        case INT:
+            return to_json_limits(cp.int_property._limits);
         default:
             throw std::runtime_error("Unknown config type");
     }
@@ -240,6 +263,11 @@ void handle_get(http_request request) {
         o["default_value"] = to_json_value_from_default(cp);
         o["value"] = to_json_value(cp);
         o["type"] = json::value::string(to_string(cp.type));
+
+        auto json_limits = to_json_limits(cp);
+        if (!json_limits.is_null()) {
+            o["limits"] = json_limits;
+        }
 
         body[p.first] = o;
     }
