@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 
+#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include "cpprest/http_listener.h"
 #include "cpprest/json.h"
@@ -24,6 +25,8 @@ namespace boost {
 namespace cpprestconfig {
 
 using std::to_string;
+
+namespace fs = boost::filesystem;
 
 using namespace web;  // NOLINT
 using namespace web::http;  // NOLINT
@@ -112,7 +115,7 @@ void assign_from_string(
 
 enum ConfigType {
     BOOL,
-    INT
+    INT,
 };
 
 std::string to_string(ConfigType c) {
@@ -131,6 +134,7 @@ struct ConfigProperty {
     ConfigType type;
     ConfigTypeProperty<bool> bool_property;
     ConfigTypeProperty<int> int_property;
+    Options options;
 };
 
 std::string to_string(const ConfigProperty &cp) {
@@ -202,6 +206,9 @@ static ConfigProperties& config_properties() {
     return cp;
 }
 
+void loadPersist(ConfigProperty *cp);
+void savePersist(ConfigProperty *cp);
+
 template<>
 bool& config(
     bool default_value,
@@ -209,7 +216,8 @@ bool& config(
     const char *short_desc,
     const char *long_desc,
     callback<bool> _callback,
-    limits<bool> _limits
+    limits<bool> _limits,
+    Options options
 ) {
     logger()->info("{}={}", key, default_value);
 
@@ -217,12 +225,15 @@ bool& config(
     cp.key = key;
     cp.short_desc = short_desc;
     cp.long_desc = long_desc;
+    cp.options = options;
 
     cp.type = BOOL;
     cp.bool_property.value = default_value;
     cp.bool_property.default_value = default_value;
     cp.bool_property._callback = _callback;
     cp.bool_property._limits = _limits;
+
+    loadPersist(&cp);
 
     return cp.bool_property.value;
 }
@@ -234,7 +245,8 @@ int& config<int>(
     const char *short_desc,
     const char *long_desc,
     callback<int> _callback,
-    limits<int> _limits
+    limits<int> _limits,
+    Options options
 ) {
     logger()->info("{}={}", key, default_value);
 
@@ -242,12 +254,15 @@ int& config<int>(
     cp.key = key;
     cp.short_desc = short_desc;
     cp.long_desc = long_desc;
+    cp.options = options;
 
     cp.type = INT;
     cp.int_property.value = default_value;
     cp.int_property.default_value = default_value;
     cp.int_property._callback = _callback;
     cp.int_property._limits = _limits;
+
+    loadPersist(&cp);
 
     return cp.int_property.value;
 }
@@ -292,6 +307,7 @@ void handle_put(http_request request) {
     try {
         cp = &config_properties().at(key);
         assign_from_string(cp, key, new_value);
+        savePersist(cp);
 
         logger()->info("{}={}", key, to_string(*cp));
 
@@ -310,12 +326,71 @@ void handle_put(http_request request) {
 }
 
 std::unique_ptr<http_listener> g_listener;
+char *g_persistDir = NULL;
+
+void loadPersist(ConfigProperty *cp) {
+    if (!g_persistDir)
+        return;
+    if ((cp->options & Options::NoPersist))
+        return;
+
+    auto persistFile = (fs::path(g_persistDir) / cp->key).native();
+
+    std::ifstream ifs(persistFile);
+    if (!ifs.is_open()) {
+        logger()->info("Did not load {}; {} not found", cp->key, persistFile);
+        return;
+    }
+
+    try {
+        std::string value((std::istreambuf_iterator<char>(ifs)),
+            std::istreambuf_iterator<char>());
+
+        assign_from_string(cp, cp->key, value);
+        logger()->info("Loaded {} from {}", cp->key, persistFile);
+    } catch (const boost::bad_lexical_cast &ex) {
+        logger()->info("Did not loaded {} from {}; {}",
+            cp->key, persistFile, ex.what());
+    }
+}
+
+void savePersist(ConfigProperty *cp) {
+    if (!g_persistDir)
+        return;
+    if ((cp->options & Options::NoPersist))
+        return;
+
+    auto persistFile = (fs::path(g_persistDir) / cp->key).native();
+
+    std::ofstream ofs(persistFile);
+    if (!ofs.is_open()) {
+        logger()->info("saving {} (failed)", persistFile);
+        return;
+    }
+
+    logger()->info("saving {}", persistFile);
+
+    std::string value = to_string(*cp);
+    ofs.write(value.c_str(), value.size());
+}
 
 void start_server(
     int port,
-    const char *basepath
+    const char *basepath,
+    const char *persistDir
 ) {
-    for (const auto &p : config_properties()) {
+    if (g_persistDir) {
+        free(g_persistDir);
+    }
+    g_persistDir = NULL;
+    if (persistDir) {
+        g_persistDir = strdup(persistDir);
+        fs::create_directories(g_persistDir);
+    }
+
+    logger()->info("current configuration is:");
+    for (auto &p : config_properties()) {
+        loadPersist(&p.second);
         logger()->info("{}={}", p.first, to_string(p.second));
     }
 

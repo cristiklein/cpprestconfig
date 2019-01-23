@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+#include <boost/filesystem.hpp>
+
 #include "gtest/gtest.h"
 #include "cpprest/http_client.h"
 #include "cpprest/json.h"
@@ -264,6 +266,105 @@ TEST(CppRestConfigTest, InvalidValue) {
         "main.show_fps",
         "weird_value").get();
     EXPECT_EQ(response.status_code(), status_codes::BadRequest);
+
+    cpprestconfig::stop_server();
+}
+
+TEST(CppRestConfigTest, PersistenceTest) {
+    using namespace web;  // NOLINT
+    using namespace web::http;  // NOLINT
+    using namespace web::http::client;  // NOLINT
+    using utility::conversions::to_string_t;
+
+    namespace fs = boost::filesystem;
+
+    fs::path tmpDir = fs::unique_path();
+
+    int &value = cpprestconfig::config(
+        0,
+        "main.random_value",
+        "Show something cool",
+        "Used by persistence test");
+    int value_to_set_and_expect;
+    {
+        time_t t;
+        time(&t);
+        value_to_set_and_expect = t;
+    }
+
+    cpprestconfig::start_server(8088,
+        "/api/config",
+        tmpDir.native().c_str());
+
+    http_client client(U("http://127.0.0.1:8088/api/config"));
+    auto response = client.request(
+        methods::PUT,
+        "main.random_value",
+        std::to_string(value_to_set_and_expect)).get();
+    EXPECT_EQ(response.status_code(), status_codes::OK);
+
+    cpprestconfig::stop_server();
+
+    value = 0;
+    EXPECT_NE(value, value_to_set_and_expect);
+
+    // start_server should reload from persistence
+    cpprestconfig::start_server(8088,
+        "/api/config",
+        tmpDir.native().c_str());
+
+    EXPECT_EQ(value, value_to_set_and_expect);
+
+    cpprestconfig::stop_server();
+}
+
+TEST(CppRestConfigTest, NonPersistenceTest) {
+    using namespace web;  // NOLINT
+    using namespace web::http;  // NOLINT
+    using namespace web::http::client;  // NOLINT
+    using utility::conversions::to_string_t;
+
+    namespace fs = boost::filesystem;
+
+    fs::path tmpDir = fs::unique_path();
+
+    int &value = cpprestconfig::config(
+        0,
+        "main.random_value2",
+        "Show something cool",
+        "Used by persistence test",
+        {},
+        {},
+        cpprestconfig::Options::NoPersist);
+    int value_to_set_and_expect;
+    {
+        time_t t;
+        time(&t);
+        value_to_set_and_expect = t;
+    }
+
+    cpprestconfig::start_server(8088,
+        "/api/config",
+        tmpDir.native().c_str());
+
+    http_client client(U("http://127.0.0.1:8088/api/config"));
+    auto response = client.request(
+        methods::PUT,
+        "main.random_value2",
+        std::to_string(value_to_set_and_expect)).get();
+    EXPECT_EQ(response.status_code(), status_codes::OK);
+
+    cpprestconfig::stop_server();
+
+    value = 0;
+    EXPECT_NE(value, value_to_set_and_expect);
+
+    // start_server should reload from persistence
+    cpprestconfig::start_server(8088,
+        "/api/config",
+        tmpDir.native().c_str());
+
+    EXPECT_EQ(value, 0);
 
     cpprestconfig::stop_server();
 }

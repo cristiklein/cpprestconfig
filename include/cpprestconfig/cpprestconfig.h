@@ -21,6 +21,11 @@ struct limits<int> {
     int step;
 };
 
+enum Options {
+    Default = 0,
+    NoPersist = (1 << 0),
+};
+
 template<typename T>
 using callback = std::function<void(const char *key, T value)>;
 
@@ -31,11 +36,13 @@ T &config(
     const char *short_desc,
     const char *long_desc,
     callback<T> callback = {},
-    limits<T> limits = {});
+    limits<T> limits = {},
+    Options options = Default);
 
 void start_server(
     int port = 8080,
-    const char *baseurl = "/api/config");
+    const char *baseurl = "/api/config",
+    const char *persistDir = NULL);
 
 void stop_server();
 
